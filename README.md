@@ -7,6 +7,7 @@ Aplikasi web untuk mengukur tingkat stres menggunakan skala PSS (Perceived Stres
 - **Form Kuesioner PSS**: Form dengan 10 pertanyaan menggunakan skala Likert (0-4)
 - **Perhitungan Otomatis**: Skor dan kategori stres (Rendah/Sedang/Tinggi) dihitung otomatis
 - **Dashboard Admin**: Melihat, mengedit, dan menghapus data responden
+- **Ekspor Excel**: Download seluruh riwayat respon dalam satu klik
 - **Database Supabase**: Data tersimpan dengan aman di cloud
 - **Responsive Design**: Tampilan optimal di semua ukuran layar
 
@@ -110,8 +111,9 @@ Tabel `responses` memiliki kolom:
 1. Klik tab "Admin"
 2. Masukkan `VITE_ADMIN_ACCESS_CODE` yang hanya diketahui admin
 3. Setelah kode valid, dashboard akan terbuka dan akses tersimpan di browser
-4. Klik ikon pensil untuk edit data / ikon tempat sampah untuk hapus data
-5. Gunakan tombol "Keluar Admin" untuk mengunci ulang pada perangkat bersama
+4. Klik tombol **Unduh Excel** untuk mengekspor seluruh data ke file .xlsx
+5. Klik ikon pensil untuk edit data / ikon tempat sampah untuk hapus data
+6. Gunakan tombol "Keluar Admin" untuk mengunci ulang pada perangkat bersama
 
 ## Teknologi
 

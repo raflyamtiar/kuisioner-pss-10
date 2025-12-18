@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { Response } from '../types';
-import { getCategoryColor } from '../utils/scoring';
-import { Trash2, Edit, X } from 'lucide-react';
-import EditModal from './EditModal';
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { Response } from "../types";
+import { getCategoryColor } from "../utils/scoring";
+import { Trash2, Edit, X, Download } from "lucide-react";
+import EditModal from "./EditModal";
+import * as XLSX from "xlsx";
 
 export default function AdminDashboard() {
   const [responses, setResponses] = useState<Response[]>([]);
@@ -18,32 +19,32 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('responses')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from("responses")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setResponses(data || []);
     } catch (error) {
-      console.error('Error fetching responses:', error);
+      console.error("Error fetching responses:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus data ini?')) return;
+    if (!confirm("Apakah Anda yakin ingin menghapus data ini?")) return;
 
     try {
-      const { error } = await supabase.from('responses').delete().eq('id', id);
+      const { error } = await supabase.from("responses").delete().eq("id", id);
 
       if (error) throw error;
 
       setResponses(responses.filter((r) => r.id !== id));
-      alert('Data berhasil dihapus');
+      alert("Data berhasil dihapus");
     } catch (error) {
-      console.error('Error deleting response:', error);
-      alert('Gagal menghapus data');
+      console.error("Error deleting response:", error);
+      alert("Gagal menghapus data");
     }
   };
 
@@ -54,7 +55,7 @@ export default function AdminDashboard() {
   const handleSaveEdit = async (updatedResponse: Response) => {
     try {
       const { error } = await supabase
-        .from('responses')
+        .from("responses")
         .update({
           nama: updatedResponse.nama,
           answers: updatedResponse.answers,
@@ -62,17 +63,58 @@ export default function AdminDashboard() {
           category: updatedResponse.category,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', updatedResponse.id);
+        .eq("id", updatedResponse.id);
 
       if (error) throw error;
 
-      setResponses(responses.map((r) => (r.id === updatedResponse.id ? updatedResponse : r)));
+      setResponses(
+        responses.map((r) =>
+          r.id === updatedResponse.id ? updatedResponse : r
+        )
+      );
       setEditingResponse(null);
-      alert('Data berhasil diperbarui');
+      alert("Data berhasil diperbarui");
     } catch (error) {
-      console.error('Error updating response:', error);
-      alert('Gagal memperbarui data');
+      console.error("Error updating response:", error);
+      alert("Gagal memperbarui data");
     }
+  };
+
+  const handleExportExcel = () => {
+    if (!responses.length) {
+      alert("Belum ada data untuk diunduh.");
+      return;
+    }
+
+    const formatter = new Intl.DateTimeFormat("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const exportRows = responses.map((response) => {
+      const row: Record<string, string | number> = {
+        Nama: response.nama,
+        "Skor Total": response.total_score,
+        Kategori: response.category,
+        Tanggal: formatter.format(new Date(response.created_at)),
+      };
+
+      response.answers.forEach((answer, index) => {
+        row[`Jawaban ${index + 1}`] = answer;
+      });
+
+      return row;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Responden PSS");
+
+    const dateStamp = new Date().toISOString().split("T")[0];
+    XLSX.writeFile(workbook, `pss-responses-${dateStamp}.xlsx`);
   };
 
   if (loading) {
@@ -90,14 +132,27 @@ export default function AdminDashboard() {
     <div className="max-w-7xl mx-auto">
       <div className="bg-white rounded-2xl shadow-lg p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Dashboard Admin</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            Dashboard Admin
+          </h1>
           <p className="text-gray-600">Kelola data hasil kuesioner PSS</p>
         </div>
 
-        <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-          <p className="text-sm text-blue-800">
-            Total Responden: <strong>{responses.length}</strong>
-          </p>
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+            <p className="text-sm text-blue-800">
+              Total Responden: <strong>{responses.length}</strong>
+            </p>
+          </div>
+
+          <button
+            onClick={handleExportExcel}
+            className="inline-flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            disabled={!responses.length}
+          >
+            <Download className="w-5 h-5" />
+            Unduh Excel
+          </button>
         </div>
 
         {responses.length === 0 ? (
@@ -109,21 +164,38 @@ export default function AdminDashboard() {
             <table className="w-full">
               <thead>
                 <tr className="border-b-2 border-gray-200">
-                  <th className="text-left py-4 px-4 font-semibold text-gray-700">Nama</th>
-                  <th className="text-center py-4 px-4 font-semibold text-gray-700">Skor Total</th>
-                  <th className="text-center py-4 px-4 font-semibold text-gray-700">Kategori</th>
-                  <th className="text-center py-4 px-4 font-semibold text-gray-700">Tanggal</th>
-                  <th className="text-center py-4 px-4 font-semibold text-gray-700">Aksi</th>
+                  <th className="text-left py-4 px-4 font-semibold text-gray-700">
+                    Nama
+                  </th>
+                  <th className="text-center py-4 px-4 font-semibold text-gray-700">
+                    Skor Total
+                  </th>
+                  <th className="text-center py-4 px-4 font-semibold text-gray-700">
+                    Kategori
+                  </th>
+                  <th className="text-center py-4 px-4 font-semibold text-gray-700">
+                    Tanggal
+                  </th>
+                  <th className="text-center py-4 px-4 font-semibold text-gray-700">
+                    Aksi
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {responses.map((response) => (
-                  <tr key={response.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr
+                    key={response.id}
+                    className="border-b border-gray-100 hover:bg-gray-50"
+                  >
                     <td className="py-4 px-4">
-                      <p className="font-medium text-gray-800">{response.nama}</p>
+                      <p className="font-medium text-gray-800">
+                        {response.nama}
+                      </p>
                     </td>
                     <td className="py-4 px-4 text-center">
-                      <span className="text-2xl font-bold text-gray-800">{response.total_score}</span>
+                      <span className="text-2xl font-bold text-gray-800">
+                        {response.total_score}
+                      </span>
                     </td>
                     <td className="py-4 px-4 text-center">
                       <span
@@ -135,13 +207,16 @@ export default function AdminDashboard() {
                       </span>
                     </td>
                     <td className="py-4 px-4 text-center text-sm text-gray-600">
-                      {new Date(response.created_at).toLocaleDateString('id-ID', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {new Date(response.created_at).toLocaleDateString(
+                        "id-ID",
+                        {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }
+                      )}
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-center gap-2">

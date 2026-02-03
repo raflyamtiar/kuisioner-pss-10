@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { Response } from "../types";
 import { getCategoryColor } from "../utils/scoring";
-import { Trash2, Edit, X, Download } from "lucide-react";
+import { Trash2, Edit, Download } from "lucide-react";
 import EditModal from "./EditModal";
 import * as XLSX from "xlsx";
 
@@ -10,6 +10,9 @@ export default function AdminDashboard() {
   const [responses, setResponses] = useState<Response[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingResponse, setEditingResponse] = useState<Response | null>(null);
+
+  // Set false untuk menyembunyikan tombol Edit
+  const showEditButton = false;
 
   useEffect(() => {
     fetchResponses();
@@ -69,8 +72,8 @@ export default function AdminDashboard() {
 
       setResponses(
         responses.map((r) =>
-          r.id === updatedResponse.id ? updatedResponse : r
-        )
+          r.id === updatedResponse.id ? updatedResponse : r,
+        ),
       );
       setEditingResponse(null);
       alert("Data berhasil diperbarui");
@@ -200,7 +203,7 @@ export default function AdminDashboard() {
                     <td className="py-4 px-4 text-center">
                       <span
                         className={`inline-block px-4 py-2 rounded-full font-semibold ${getCategoryColor(
-                          response.category
+                          response.category,
                         )}`}
                       >
                         {response.category}
@@ -215,18 +218,20 @@ export default function AdminDashboard() {
                           year: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
-                        }
+                        },
                       )}
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => handleEdit(response)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
+                        {showEditButton && (
+                          <button
+                            onClick={() => handleEdit(response)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDelete(response.id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -244,7 +249,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {editingResponse && (
+      {showEditButton && editingResponse && (
         <EditModal
           response={editingResponse}
           onSave={handleSaveEdit}
